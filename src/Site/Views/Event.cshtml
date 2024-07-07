@@ -1,0 +1,16 @@
+﻿@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@{
+	Layout = null;
+}
+<html lang="en">
+<head>
+	<title>Delivery API + Razor | @Model.Name</title>
+</head>
+<body>
+<h1>@Model.Name</h1>
+<em>Event date: @(Model.Value<DateTime>("date").ToString("D"))</em>
+<p style="white-space: pre-line">
+	@(Model.Value<string>("text"))
+</p>
+</body>
+</html>

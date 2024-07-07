@@ -1,0 +1,98 @@
+﻿@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@{
+	Layout = null;
+}
+<html lang="en">
+<head>
+	<title>Delivery API + Razor</title>
+</head>
+<body>
+<h1>@(Model.Value<string>("title"))</h1>
+
+<event-calendar></event-calendar>
+
+<script type="module">
+	import {LitElement, html} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
+
+	export class EventCalendar extends LitElement {
+		static properties = {
+			events: {attribute: false},
+		};
+		
+		_fetchPosts() {
+			// fetch all "event" items from the Delivery API within the month defined in this._month
+			const startDate = `2024-${this._month}-01`;
+			const endDate = `2024-${this._month + 1}-01`;
+			const apiUrl = `/umbraco/delivery/api/v2/content?filter=contentType:event&filter=eventDate>:${startDate}&filter=eventDate<${endDate}&sort=eventDate:asc&skip=0&take=10&fields=properties[date]`;
+			fetch(apiUrl, {	method: 'GET' })
+				.then(response => {
+					if (!response.ok) {
+						throw new Error(`Could not fetch data for URL: ${apiUrl} - response status was: ${response.status}`);
+					}
+					return response.json();
+				})
+				.then(data => {
+					// unwrap the response to a view model for the event calendar
+					this.events = data.items.map((item) => ({
+						path: item.route.path,
+						name: item.name,
+						date: item.properties.date
+					}));
+				})
+				.catch((error) => {
+					console.error('Error:', error);
+				});
+		}
+
+		_previous(e) {
+			this._month = this._month === 1 ? 12 : this._month - 1;
+			this._fetchPosts();
+		}
+
+		_next(e) {
+			this._month = this._month === 12 ? 1 : this._month + 1;
+			this._fetchPosts();
+		}
+
+		constructor() {
+			super();
+			this._month = new Date().getMonth() + 1;
+		}
+
+		connectedCallback() {
+			super.connectedCallback();
+			this._fetchPosts();
+		}
+
+		render() {
+			return this.events
+				? html`
+                <div style="max-width: 500px; border: 4px solid pink; padding: 10px;">
+					<h2>Super cool event calendar 📣</h2>
+					<div>
+						<button @@click="${this._previous}">⬅️ Previous month</button>
+						<button @@click="${this._next}">Next month ➡️️</button>
+					</div>
+					${this.events.length
+					? html`
+						<ul>
+							${this.events.map(event => html`
+	                            <li>
+									<h4><a href="${event.path}">${event.name}</a></h4>
+		                            Event date: ${event.date}
+	                            </li>                
+	                        `)}
+						</ul>
+					`
+					: html`<p>No events found. Did you remember to rebuild the Delivery API index?</p>`}
+                </div>
+                `
+				: html``;
+		}
+	}
+
+	customElements.define('event-calendar', EventCalendar);
+</script>
+
+</body>
+</html>
